@@ -1,0 +1,150 @@
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  animation: App-logo-spin infinite 20s linear;
+  height: 40vmin;
+  pointer-events: none;
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+.hidden {
+  display: none;
+}
+
+.answer {
+   text-align: center;
+   font-size: 20px;
+   margin-top:35px;
+   font-weight: bold;
+}
+
+.value {
+   text-align: center;
+   font-size: 30px;
+   margin-top:25px;
+   font-weight: bold;
+}
+
+.container {
+  max-width: 1500px;
+}
+
+.navigation {
+  padding: 30px 0;
+}
+
+.navigation h4 {
+  padding: 10px 0;
+}
+
+.navigation .btn {
+  margin: 7px 0;
+  width: 100%;
+}
+
+.categoryName {
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    color: #410c37;
+    padding: 15px 0 8px;
+    height: 80px;
+}
+
+.box {
+    border: 1px solid black;
+    padding: 10px;
+    margin: 10px 0;
+    height: 140px;
+    border-radius: 5px;
+    background-color: #f3efdf;
+    color: #103ba1;
+}
+
+.box.showAnswer {
+  background-color: #cc554c;
+  color: #ffea18;
+}
+
+.category {
+  font-weight: bold;
+  font-size: 16px;
+  padding: 3px;
+  border: 1px solid black;
+  width: 200px;
+  margin-top: 5px;
+}
+
+.box .airdate {
+  font-size: 13px;
+  color: #231f20;
+}
+
+.header {
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+
+.col, [class*="col-"] {
+  padding-right: 10px;
+  padding-left: 10px;
+}
+
+.modal-overlay {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10000;
+  background-color: #EFD9CE;
+  padding-top:50px;
+}
+
+.modal-overlay .clue {
+  margin: 0 auto;
+  max-width: 100%;
+  width: 450px;
+  font-size: 25px;
+
+}
+
+.modal-overlay .answer {
+  font-weight: bold;
+  width: 450px;
+  margin: 0 auto;
+  max-width: 100%;
+  padding: 20px 0;
+  text-align: unset;
+}
+
+.val {
+  color: red;
+  
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
