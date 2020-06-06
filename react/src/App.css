@@ -220,6 +220,10 @@ table.guesses {
   text-decoration: line-through;  
 }
 
+tr.correct {
+  background-color: green;
+}
+
 .incorrect button {
   display:none;
 }

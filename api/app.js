@@ -49,47 +49,47 @@ io.on('connection', function(socket){
 		console.log(data);
 
 		if(data.type == 'exit') {
-			currentQuestion = null;
-			guesses = [];
 
-	     	socket.emit('currentClue', currentQuestion);
-	     	socket.broadcast.emit('currentClue', currentQuestion);
-      		socket.emit('guesses', guesses);
-			socket.broadcast.emit('guesses', guesses);	
+			socket.emit('showAnswer', 'noSpoiler');
+			socket.broadcast.emit('showAnswer', 'noSpoiler');								
+
+			setTimeout(function() { // After x seconds, clear out the current question / exit out
+				currentQuestion = null;
+				guesses = [];
+		     	socket.emit('currentClue', currentQuestion);
+		     	socket.broadcast.emit('currentClue', currentQuestion);					
+			}, 3000);	   			
 		}
 		else if(data.type == 'guess') {
 			var playerName = (socket.id in playerList) ? playerList[socket.id].name : socket.id.toString();
 			console.log('player name: ' + playerName);
 			guesses.push({answer: data.answer, playerName: playerName, player: socket.id, index: guesses.length, status: 'published'})
 			
-			socket.emit('answer', currentQuestion.answer);
-			socket.broadcast.emit('answer', currentQuestion.answer);
-      		socket.emit('guesses', guesses);
-			socket.broadcast.emit('guesses', guesses);			
+			broadcastEverything();		
 		}
 		else if(data.type == 'judgement') {
 			if(data.judgement == 'correct' && currentQuestion !== null) {
 				playerList[data.player].score += currentQuestion.value;
+				guesses[data.index].status = 'correct';
+				socket.emit('showAnswer', 'noSpoiler');
+				socket.broadcast.emit('showAnswer', 'noSpoiler');
+								
+				broadcastEverything();
+
 				currentQuestion = null;
 				guesses = [];
+
+				setTimeout(function() { // After x seconds, clear out the current question / exit out
+			     	socket.emit('currentClue', currentQuestion);
+			     	socket.broadcast.emit('currentClue', currentQuestion);					
+				}, 3000);				
 			}
 			else {
 				playerList[data.player].score -= currentQuestion.value;
 				guesses[data.index].status = 'incorrect';
-			}
 
-		      var output = [], item;
-		      for(var type in playerList) {
-		      	item = {};
-		      	item.id = type;
-		      	item.name = playerList[type].name;
-		      	item.score = playerList[type].score;
-		      	output.push(item);
-		      }			
-			socket.emit('playerList', output);
-			socket.broadcast.emit('playerList', output);
-			socket.emit('guesses', guesses);
-			socket.broadcast.emit('guesses', guesses);			        
+				broadcastEverything();
+			}
 		}
 	})
 
@@ -97,23 +97,38 @@ io.on('connection', function(socket){
 		console.log('Name changed: ' + socket.id + ' to ' + data);
 		playerList[socket.id] = {name : data, score : 0};
 
-	      var output = [], item;
-	      for(var type in playerList) {
-	      	item = {};
-	      	item.id = type;
-	      	item.name = playerList[type].name;
-	      	item.score = playerList[type].score;
-	      	output.push(item);
-	      }			
-	      
-		socket.emit('playerList', output);
-		socket.broadcast.emit('playerList', output);
+		broadcastEverything();
 	});
 
 
 	socket.on('disconnect', function() {
 		console.log('A user disconnected.');
 	})
+
+	function broadcastEverything() {
+      var output = [], item;
+      for(var type in playerList) {
+      	item = {};
+      	item.id = type;
+      	item.name = playerList[type].name;
+      	item.score = playerList[type].score;
+      	output.push(item);
+      }			
+		socket.emit('playerList', output);
+		socket.broadcast.emit('playerList', output);
+
+		if(guesses.length > 0) {
+			socket.emit('guesses', guesses);
+			socket.broadcast.emit('guesses', guesses);			
+		}
+		if(currentQuestion != undefined) {
+			socket.emit('answer', currentQuestion.answer);
+			socket.broadcast.emit('answer', currentQuestion.answer);															
+		}
+		socket.emit('currentClue', currentQuestion);
+		socket.broadcast.emit('currentClue', currentQuestion);		
+	}
+
 }) 
 
 const getApiAndEmit = socket => {
