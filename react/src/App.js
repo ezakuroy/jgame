@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import socketIOClient from "socket.io-client";
 
+import {subscribeToEvents} from './subscribeToEvents';
 import logo from './logo.svg';
 import './App.css';
 
@@ -17,16 +18,25 @@ class App extends Component {
     this.state = {
       clues: [],
       currentRound: 1,
-      currentClue: null
+      currentClue: null,
+      players: null,
+      nameSet: false,
+      playerName: ''
     };
 
     this.handleChange = this.handleChange.bind(this);
     this.handleSearch = this.handleSearch.bind(this);
     this.handleClueChange = this.handleClueChange.bind(this);
+    this.setName = this.setName.bind(this);
+    this.handleSubmit = this.handleSubmit.bind(this);
+
+    //subscribeToEvents((err, playerList) => this.setState({players: playerList}));
+    socket.on('playerList', data => this.setState({players: data}));
+    socket.on('currentClue', data => this.setState({currentClue: data}));
   }
 
   componentDidMount() {
-    console.log('mounting')
+    console.log('mounting');
     fetch(CategoriesAPI)
       .then(response => response.json())
       .then(data => this.setState({ clues: data }));
@@ -63,8 +73,19 @@ class App extends Component {
     //event.preventDefault();
     this.setState({ currentClue: value })
     console.log('Clue changed: ' + value);
-    socket.emit('event', {clue : value});    
+    socket.emit('clueChange', value);    
   }
+
+  setName(event) {
+    this.setState({ playerName: event.target.value })    
+  }
+
+  handleSubmit(event) {
+    socket.emit('nameChange', this.state.playerName);    
+    this.setState({ nameSet: true});
+    event.preventDefault();
+  }
+
 
   render() {
     const { clues } = this.state;
@@ -73,29 +94,52 @@ class App extends Component {
     if(this.state.currentClue !== null) {
       currentClueComponent = <CurrentClue object = {this.state.currentClue} />;
     }
+
+
+    let playerList = null;
+    if(this.state.players !== null) {
+      playerList =  <div><h4>Players</h4>{this.state.players.map(player => (<Player object = {player} />))}</div>;      
+    }
+
+    let container = null;
+    if(!this.state.nameSet) {
+      container = <div className="nameInput"><form onSubmit = {this.handleSubmit}><label>What is your name?</label> &nbsp; <input type="text" value={this.state.playerName} onChange={this.setName}/> &nbsp;<input type="submit" value="Set" /></form></div>
+    }
+    else {
+      container = 
+        
+        <div>
+          <div className="row" className="header">
+            <form onSubmit={this.handleSearch}>
+              Category Search: &nbsp;
+              <input type="text" value={this.state.categorySearch} onChange={this.handleChange}/>
+              &nbsp;<input type="submit" value="Submit" />
+            </form>
+            </div>
+
+            <div className="row">
+                { currentClueComponent }
+
+                {clues.map(category => (
+                  <Cat object = {category} handleClueChange= {this.handleClueChange} />
+                ))}
+
+                <div className="col-md-2 navigation">
+                   {playerList}
+
+                  <h4>Round</h4>
+                  <div className="btn btn-primary"><a onClick={(e) => {this.changeRound(e, 1)}}>Jeopardy Round</a></div>
+                  <div className="btn btn-primary"><a onClick={(e) => {this.changeRound(e, 2)}}>Double Jeopardy Round</a></div>                
+                </div>
+
+            </div>
+        </div>
+      
+    }
+
     return (
         <div className="container">
-          <div className="row" className="header">
-          <form onSubmit={this.handleSearch}>
-            Category Search: &nbsp;
-            <input type="text" value={this.state.categorySearch} onChange={this.handleChange}/>
-            &nbsp;<input type="submit" value="Submit" />
-          </form>
-          </div>
-
-          <div className="row">
-              { currentClueComponent }
-              {clues.map(category => (
-                <Cat object = {category} handleClueChange= {this.handleClueChange} />
-              ))}
-
-              <div className="col-md-2 navigation">
-                <h4>Round</h4>
-                <div className="btn btn-primary"><a onClick={(e) => {this.changeRound(e, 1)}}>Jeopardy Round</a></div>
-                <div className="btn btn-primary"><a onClick={(e) => {this.changeRound(e, 2)}}>Double Jeopardy Round</a></div>                
-              </div>
-
-          </div>
+          { container }
         </div>
     );
   }
@@ -106,14 +150,30 @@ class CurrentClue extends Component {
     super(props);
 
     this.state = {
-      answer: null
+      answer: null,
+      allGuesses: [],
+      correctAnswer: null
     };
 
-    this.answerQuestion = this.answerQuestion.bind(this);
+    this.handleExit = this.handleExit.bind(this);    
+    this.handleGuess = this.handleGuess.bind(this);
+    this.handleGuessChange = this.handleGuessChange.bind(this);
+
+    socket.on('guesses', data => this.setState({allGuesses: data}));    
+    socket.on('answer', data => this.setState({correctAnswer: data}));
   }
 
-  answerQuestion(value) {
-    console.log(this.state.answer);
+  handleExit(event) {
+    socket.emit('event', {type: 'exit'})
+  }
+
+  handleGuessChange(event) {
+    this.setState({ guess: event.target.value })
+  }
+
+  handleGuess(event) {
+    socket.emit('event', {type: 'guess', answer: this.state.guess})
+    event.preventDefault();    
   }
 
   componentDidMount() {
@@ -121,15 +181,66 @@ class CurrentClue extends Component {
   }
 
   render() {
+    let correctAnswer = null;
+    if(this.state.correctAnswer !== null) {
+      correctAnswer = 
+        <div className="answers">
+          <div className = "correctAnswer"><strong>Correct Answer:</strong> <span className="spoiler">{this.state.correctAnswer}</span></div>
+
+         <table className = "guesses">
+            {this.state.allGuesses.map(guess => (<Guess object = {guess} />))}          
+         </table>
+      </div>;
+    }
     return(
       <div className = "modal-overlay">
-         <div className = "clue"> {this.props.object.clue} </div>
-         <div className = "answer"> 
-            <input type="text" value={this.state.answer} onChange={this.answerQuestion}/>
-            &nbsp;<input type="submit" value="Submit" />
+        <div className = "clue-details col-md-4 offset-md-4">
+          <div className='categoryName'>{this.props.object.category}</div>
+          <div className='clueValue'>${this.props.object.value}</div>
+          <div className='airdate'>{this.props.object.airdate}</div>
+          <div className = "clue"> {this.props.object.clue} </div>
+          <div className = "answer"> 
+            <form onSubmit = {this.handleGuess}>
+              <input type="text" value={this.state.guess} onChange={this.handleGuessChange}/>
+              &nbsp;<input type="submit" className="btn-lg btn-primary" value="Submit" />
+            </form>
+         </div>
+
+            {correctAnswer}
+
+         <button className="btn-lg btn-info" onClick={this.handleExit}>Exit</button>
+         
          </div>
 
       </div>
+    );
+  }
+}
+
+class Guess extends Component {
+  constructor(props) {
+    super(props);
+
+    this.handleJudgement = this.handleJudgement.bind(this);    
+  }
+
+  handleJudgement(value, e) {
+    console.log('Judgement: ' + value);
+    socket.emit('event', {type: 'judgement', judgement: value, player: this.props.object.player, index: this.props.object.index});
+  }
+
+  render() {
+    return(
+      <tr className={this.props.object.status}>
+        <td className='guess'>
+          <div className="guessBy">Guess by: {this.props.object.playerName}</div>
+          <div className="guessAnswer">{this.props.object.answer}</div>
+        </td>
+        <td className="judgement ">
+          <button onClick={(e) => this.handleJudgement("correct", e)}><i className="fa fa-check"/></button>
+          <button onClick={(e) => this.handleJudgement("incorrect", e)}><i className="fa fa-remove"/></button> 
+        </td>
+      </tr>
     );
   }
 }
@@ -186,5 +297,20 @@ class Clue extends Component {
 
 }
 
+class Player extends Component {
+
+  componentDidMount() {
+    console.log(this.props);    
+  }
+
+  render() {
+    return(
+        <div className="player">
+            <span className="playerName">{this.props.object.name}</span> <span className="score">${this.props.object.score}</span>
+        </div>     
+    );
+  }  
+
+}
 
 export default App;

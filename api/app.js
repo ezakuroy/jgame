@@ -18,12 +18,70 @@ if (err) {
 
 //io.set('origins', 'http://localhost:3000')
 
+var playerList = {};
+var currentQuestion;
+var guesses = [];
+
 io.on('connection', function(socket){
 	console.log('A user connected.');
 
+	socket.on('clueChange', (data) => {
+		currentQuestion = data;
+	})
+
 	socket.on('event', (data) => {
 		console.log(data);
+
+		if(data.type == 'exit') {
+			currentQuestion = null;
+			guesses = [];
+		}
+		else if(data.type == 'guess') {
+			var playerName = (socket.id in playerList) ? playerList[socket.id].name : socket.id.toString();
+			console.log('player name: ' + playerName);
+			guesses.push({answer: data.answer, playerName: playerName, player: socket.id, index: guesses.length, status: 'published'})
+
+			setTimeout(function(){
+				socket.emit('answer', currentQuestion.answer);
+			}, 1);
+		}
+		else if(data.type == 'judgement') {
+			if(data.judgement == 'correct' && currentQuestion !== null) {
+				playerList[data.player].score += currentQuestion.value;
+				currentQuestion = null;
+				guesses = [];
+			}
+			else {
+				playerList[data.player].score -= currentQuestion.value;
+				guesses[data.index].status = 'incorrect';
+			}
+		}
+	})
+
+	socket.on('nameChange', (data) => {
+		console.log('Name changed: ' + socket.id + ' to ' + data);
+//		socket.emit('players', io.sockets.clients());
+		playerList[socket.id] = {name : data, score : 0};
+
+		console.log(playerList);
 	});
+
+   setInterval(function() {
+      //Sending an object when emmiting an event
+      var output = [], item;
+      for(var type in playerList) {
+      	item = {};
+      	item.id = type;
+      	item.name = playerList[type].name;
+      	item.score = playerList[type].score;
+      	output.push(item);
+      }
+      socket.emit('playerList', output);
+
+      socket.emit('currentClue', currentQuestion);
+
+      socket.emit('guesses', guesses);
+   }, 1000);
 
 	socket.on('disconnect', function() {
 		console.log('A user disconnected.');
