@@ -148,7 +148,8 @@ class CurrentClue extends Component {
     this.state = {
       answer: null,
       allGuesses: [],
-      correctAnswer: null
+      correctAnswer: null,
+      showAnswer: null
     };
 
     this.handleExit = this.handleExit.bind(this);    
@@ -156,7 +157,11 @@ class CurrentClue extends Component {
     this.handleGuessChange = this.handleGuessChange.bind(this);
 
     socket.on('guesses', data => this.setState({allGuesses: data}));    
-    socket.on('answer', data => this.setState({correctAnswer: data}));
+    socket.on('showAnswer', data => this.setState({showAnswer: data}));    
+  }
+
+  componentDidMount() {
+    this.guessInput.focus();
   }
 
   handleExit(event) {
@@ -172,18 +177,28 @@ class CurrentClue extends Component {
     event.preventDefault();    
   }
 
+  dontknow(event) {
+
+    event.preventDefault();        
+  }
+
   componentDidMount() {
     console.log(this.props);    
   }
 
   render() {
     let correctAnswer = null;
-    if(this.state.correctAnswer !== null) {
+    if(this.state.showAnswer !== null || this.state.allGuesses.length > 0) {
+      this.state.showAnswer = (this.state.showAnswer != null) ? this.state.showAnswer : 'spoiler';
+
       correctAnswer = 
+        <div className="answers">
+          <div className = "correctAnswer"><strong>Correct Answer:</strong> <span className={this.state.showAnswer}>{this.props.object.answer}</span></div>
 
          <table className = "guesses">
             {this.state.allGuesses.map(guess => (<Guess object = {guess} />))}          
-         </table>;
+         </table>
+      </div>;
     }
     return(
       <div className = "modal-overlay">
@@ -191,20 +206,18 @@ class CurrentClue extends Component {
             <div className='categoryName'>{this.props.object.category}</div>
             <div className='clueValue'>${this.props.object.value}</div>
             <div className='airdate'>{this.props.object.airdate}</div>
-            <div className = "clue"> {this.props.object.clue} </div>
-            <div className = "answer"> 
+            <div className = 'clue'> {this.props.object.clue} </div>
+            <div className = 'answer'> 
               <form onSubmit = {this.handleGuess}>
-                <input type="text" value={this.state.guess} onChange={this.handleGuessChange}/>
+                <input autoFocus type="text" value={this.state.guess} onChange={this.handleGuessChange}/>
                 &nbsp;<input type="submit" className="btn-lg btn-primary" value="Submit" />
               </form>
+
            </div>
-        <div className="answers">
-          <div className = "correctAnswer"><strong>Correct Answer:</strong> <span className="spoiler">{this.props.object.answer}</span></div>
 
               {correctAnswer}
 
-          </div>
-           <button className="btn-lg btn-info" onClick={this.handleExit}>Exit</button>
+           <button className="btn-lg btn-info" onClick={this.handleExit}>Don't Know</button>
         </div>
 
       </div>
