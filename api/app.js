@@ -2,9 +2,11 @@ const express = require('express')
 const app = express()
 const port = 3001
 
+
 //var http = require('http').Server(app);
 const ioserver = require('http').createServer();
 var io = require('socket.io').listen(ioserver);
+app.set('socketIo', io);
 
 ioserver.listen(3002);
 
@@ -21,12 +23,26 @@ if (err) {
 var playerList = {};
 var currentQuestion;
 var guesses = [];
+var board = [];
 
 io.on('connection', function(socket){
 	console.log('A user connected.');
 
 	socket.on('clueChange', (data) => {
 		currentQuestion = data;
+     	socket.emit('currentClue', currentQuestion);
+     	socket.broadcast.emit('currentClue', currentQuestion);
+
+		for(var index = 0; index < board.length; index++) {
+			for(var i = 0; i < board[index].length; i++) {
+				if(currentQuestion.clue_id === board[index][i].clue_id) {
+					board[index][i].used = true;
+					socket.emit('board', board);
+					socket.broadcast.emit('board', board);
+					break;
+				}
+			}     				
+		}
 	})
 
 	socket.on('event', (data) => {
@@ -35,15 +51,21 @@ io.on('connection', function(socket){
 		if(data.type == 'exit') {
 			currentQuestion = null;
 			guesses = [];
+
+	     	socket.emit('currentClue', currentQuestion);
+	     	socket.broadcast.emit('currentClue', currentQuestion);
+      		socket.emit('guesses', guesses);
+			socket.broadcast.emit('guesses', guesses);	
 		}
 		else if(data.type == 'guess') {
 			var playerName = (socket.id in playerList) ? playerList[socket.id].name : socket.id.toString();
 			console.log('player name: ' + playerName);
 			guesses.push({answer: data.answer, playerName: playerName, player: socket.id, index: guesses.length, status: 'published'})
-
-			setTimeout(function(){
-				socket.emit('answer', currentQuestion.answer);
-			}, 1);
+			
+			socket.emit('answer', currentQuestion.answer);
+			socket.broadcast.emit('answer', currentQuestion.answer);
+      		socket.emit('guesses', guesses);
+			socket.broadcast.emit('guesses', guesses);			
 		}
 		else if(data.type == 'judgement') {
 			if(data.judgement == 'correct' && currentQuestion !== null) {
@@ -55,33 +77,39 @@ io.on('connection', function(socket){
 				playerList[data.player].score -= currentQuestion.value;
 				guesses[data.index].status = 'incorrect';
 			}
+
+		      var output = [], item;
+		      for(var type in playerList) {
+		      	item = {};
+		      	item.id = type;
+		      	item.name = playerList[type].name;
+		      	item.score = playerList[type].score;
+		      	output.push(item);
+		      }			
+			socket.emit('playerList', output);
+			socket.broadcast.emit('playerList', output);
+			socket.emit('guesses', guesses);
+			socket.broadcast.emit('guesses', guesses);			        
 		}
 	})
 
 	socket.on('nameChange', (data) => {
 		console.log('Name changed: ' + socket.id + ' to ' + data);
-//		socket.emit('players', io.sockets.clients());
 		playerList[socket.id] = {name : data, score : 0};
 
-		console.log(playerList);
+	      var output = [], item;
+	      for(var type in playerList) {
+	      	item = {};
+	      	item.id = type;
+	      	item.name = playerList[type].name;
+	      	item.score = playerList[type].score;
+	      	output.push(item);
+	      }			
+	      
+		socket.emit('playerList', output);
+		socket.broadcast.emit('playerList', output);
 	});
 
-   setInterval(function() {
-      //Sending an object when emmiting an event
-      var output = [], item;
-      for(var type in playerList) {
-      	item = {};
-      	item.id = type;
-      	item.name = playerList[type].name;
-      	item.score = playerList[type].score;
-      	output.push(item);
-      }
-      socket.emit('playerList', output);
-
-      socket.emit('currentClue', currentQuestion);
-
-      socket.emit('guesses', guesses);
-   }, 1000);
 
 	socket.on('disconnect', function() {
 		console.log('A user disconnected.');
@@ -102,6 +130,7 @@ app.use(function(req, res, next) {
   next();
 });
 
+/*
 app.get('/category/search', (req, res) => {
 	let term = req.query.q;
 
@@ -114,10 +143,15 @@ app.get('/category/search', (req, res) => {
 			return console.error(err.message);
 		}
 
-		res.json(allRows)
+//		res.json(allRows)
+	   var socket = req.app.get('socketIo');
+       socket.emit('board', board);		
+   	   res.end();
+	
 	});
 
 });
+*/
 
 app.get('/category', (req, res) => {
 	let term = req.query.q;
@@ -131,11 +165,17 @@ app.get('/category', (req, res) => {
 			return console.error(err.message);
 		}
 
-		res.json(allRows)
+		//res.json(allRows)
+	   board = returnArray;		
+	   var socket = req.app.get('socketIo');
+       socket.emit('board', allRows);		
+   	   res.end();
+
 	});
 
 });
 
+/*
 app.get('/clues/search', (req, res) => {
 	let term = req.query.q;
 
@@ -148,10 +188,15 @@ app.get('/clues/search', (req, res) => {
 			return console.error(err.message);
 		}
 
-		res.json(allRows)
+		//res.json(allRows)
+	   var socket = req.app.get('socketIo');
+       socket.emit('board', allRows);		
+   	   res.end();
+		
 	});
 
 });
+*/
 
 app.get('/clues/getGroup', (req, res) => {
 	console.log('Called get group API');
@@ -212,7 +257,13 @@ app.get('/clues/getGroup', (req, res) => {
 		});	
 
 		returnArray.push(currentArray);
-		res.json(returnArray);
+		//board = JSON.stringify(allRows);
+
+	   board = returnArray;
+	   var socket = req.app.get('socketIo');
+       socket.emit('board', returnArray);		
+   	   res.end();
+		//res.json(returnArray);
 	});
 });
 

@@ -19,7 +19,7 @@ class App extends Component {
       clues: [],
       currentRound: 1,
       currentClue: null,
-      players: null,
+      players: [],
       nameSet: false,
       playerName: ''
     };
@@ -33,13 +33,12 @@ class App extends Component {
     //subscribeToEvents((err, playerList) => this.setState({players: playerList}));
     socket.on('playerList', data => this.setState({players: data}));
     socket.on('currentClue', data => this.setState({currentClue: data}));
+    socket.on('board', data => this.setState({clues: data}))
   }
 
   componentDidMount() {
     console.log('mounting');
-    fetch(CategoriesAPI)
-      .then(response => response.json())
-      .then(data => this.setState({ clues: data }));
+    fetch(CategoriesAPI);
   }
 
   changeRound(event, parameter) {
@@ -48,18 +47,14 @@ class App extends Component {
     this.setState({currentRound: parameter})
 
     console.log('changing round');
-    fetch(CategoriesAPI + '?roundNum=' + parameter)
-      .then(response => response.json())
-      .then(data => this.setState({ clues: data }));      
+    fetch(CategoriesAPI + '?roundNum=' + parameter);    
   }
 
   handleSearch(event) {
     console.log('searching');
     this.setState({clues:[]})
 
-    fetch(CategoriesAPI + '?roundNum=' + this.state.currentRound + '&categorySearch=' + this.state.categorySearch)
-      .then(response => response.json())
-      .then(data => this.setState({ clues: data }));     
+    fetch(CategoriesAPI + '?roundNum=' + this.state.currentRound + '&categorySearch=' + this.state.categorySearch);
      event.preventDefault();
 
      socket.emit('event', {my: 'data'});
@@ -110,13 +105,6 @@ class App extends Component {
         
         <div>
           <div className="row" className="header">
-            <form onSubmit={this.handleSearch}>
-              Category Search: &nbsp;
-              <input type="text" value={this.state.categorySearch} onChange={this.handleChange}/>
-              &nbsp;<input type="submit" value="Submit" />
-            </form>
-            </div>
-
             <div className="row">
                 { currentClueComponent }
 
@@ -130,6 +118,14 @@ class App extends Component {
                   <h4>Round</h4>
                   <div className="btn btn-primary"><a onClick={(e) => {this.changeRound(e, 1)}}>Jeopardy Round</a></div>
                   <div className="btn btn-primary"><a onClick={(e) => {this.changeRound(e, 2)}}>Double Jeopardy Round</a></div>                
+
+                  <form onSubmit={this.handleSearch} className="categorySearch">
+                    <h4>Category Search:</h4>
+                    <input type="text" value={this.state.categorySearch} onChange={this.handleChange}/>
+                    &nbsp;<input type="submit" value="Submit" />
+                  </form>
+                  </div>
+
                 </div>
 
             </div>
@@ -184,33 +180,32 @@ class CurrentClue extends Component {
     let correctAnswer = null;
     if(this.state.correctAnswer !== null) {
       correctAnswer = 
-        <div className="answers">
-          <div className = "correctAnswer"><strong>Correct Answer:</strong> <span className="spoiler">{this.state.correctAnswer}</span></div>
 
          <table className = "guesses">
             {this.state.allGuesses.map(guess => (<Guess object = {guess} />))}          
-         </table>
-      </div>;
+         </table>;
     }
     return(
       <div className = "modal-overlay">
         <div className = "clue-details col-md-4 offset-md-4">
-          <div className='categoryName'>{this.props.object.category}</div>
-          <div className='clueValue'>${this.props.object.value}</div>
-          <div className='airdate'>{this.props.object.airdate}</div>
-          <div className = "clue"> {this.props.object.clue} </div>
-          <div className = "answer"> 
-            <form onSubmit = {this.handleGuess}>
-              <input type="text" value={this.state.guess} onChange={this.handleGuessChange}/>
-              &nbsp;<input type="submit" className="btn-lg btn-primary" value="Submit" />
-            </form>
-         </div>
+            <div className='categoryName'>{this.props.object.category}</div>
+            <div className='clueValue'>${this.props.object.value}</div>
+            <div className='airdate'>{this.props.object.airdate}</div>
+            <div className = "clue"> {this.props.object.clue} </div>
+            <div className = "answer"> 
+              <form onSubmit = {this.handleGuess}>
+                <input type="text" value={this.state.guess} onChange={this.handleGuessChange}/>
+                &nbsp;<input type="submit" className="btn-lg btn-primary" value="Submit" />
+              </form>
+           </div>
+        <div className="answers">
+          <div className = "correctAnswer"><strong>Correct Answer:</strong> <span className="spoiler">{this.props.object.answer}</span></div>
 
-            {correctAnswer}
+              {correctAnswer}
 
-         <button className="btn-lg btn-info" onClick={this.handleExit}>Exit</button>
-         
-         </div>
+          </div>
+           <button className="btn-lg btn-info" onClick={this.handleExit}>Exit</button>
+        </div>
 
       </div>
     );
@@ -271,6 +266,7 @@ class Cat extends Component {
 class Clue extends Component {
   state = {boxState: 'showValue'}
   toggleHidden () {
+
     if(this.state.boxState == 'showValue') {
       this.setState({boxState : 'showClue' })
     }
@@ -280,16 +276,25 @@ class Clue extends Component {
     else {
       this.setState({boxState : 'showValue' })
     }
+
     this.props.handleClueChange(this.props.object);
   }
   render() {
+    let classNameBox = null;
+    if(this.props.object.used) {
+      classNameBox = 'used box';
+    }
+    else {
+      classNameBox = 'box'
+    }
+
     return(
-      <div key={this.props.object.objectID} className={this.state.boxState + ' box'} onClick={this.toggleHidden.bind(this, this.props.object.objectID)}>
+      <div key={this.props.object.objectID} className={classNameBox} onClick={this.toggleHidden.bind(this, this.props.object.objectID)}>
         
-          <div className={this.state.boxState == 'showValue' ? 'visible value' : 'hidden value'}>${this.props.object.value} 
+          <div className={classNameBox == 'box' ? 'visible value' : 'hidden value'}>${this.props.object.value} 
           <div className='airdate'>{this.props.object.airdate}</div></div>
-          <div className={this.state.boxState == 'showClue' ? 'visible clue' : 'hidden clue'}>{this.props.object.clue} </div>
-          <div className={this.state.boxState == 'showAnswer' ? 'visible answer' : 'hidden answer'}>{this.props.object.answer}</div>
+          {/*<div className={this.state.boxState == 'showClue' ? 'visible clue' : 'hidden clue'}>{this.props.object.clue} </div>
+          <div className={this.state.boxState == 'showAnswer' ? 'visible answer' : 'hidden answer'}>{this.props.object.answer}</div>*/}
         
       </div>      
     )
