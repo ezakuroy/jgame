@@ -5,9 +5,9 @@ import {subscribeToEvents} from './subscribeToEvents';
 import logo from './logo.svg';
 import './App.css';
 
-const ENDPOINT = 'http://localhost:3002';
-const API = 'http://localhost:3001/category?q=';
-const CategoriesAPI = 'http://localhost:3001/clues/getGroup';
+const ENDPOINT = 'http://67.207.87.240:3002';
+const API = 'http://67.207.87.240:3001/category?q=';
+const CategoriesAPI = 'http://67.207.87.240:3001/clues/getGroup';
 const DEFAULT_QUERY = '2';
 const socket = socketIOClient(ENDPOINT);
 

@@ -11,16 +11,6 @@ body {
   pointer-events: none;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
 
 .App-link {
   color: #61dafb;
@@ -169,6 +159,22 @@ body {
 
 .modal-overlay .answer {
   text-align: center;
+}
+
+@media only screen and (max-width: 600px) {
+  .modal-overlay .clue {
+   font-size: 15px;   
+  }
+
+  .modal-overlay .categoryName {
+    font-size: 16px;
+  }
+
+  .modal-overlay {
+    position: absolute;
+    height: auto;
+    min-height:100%;
+  }
 }
 
 .answer form input[type="text"] {
