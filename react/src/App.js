@@ -29,6 +29,7 @@ class App extends Component {
     this.handleClueChange = this.handleClueChange.bind(this);
     this.setName = this.setName.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
+    this.handleReset = this.handleReset.bind(this);
 
     //subscribeToEvents((err, playerList) => this.setState({players: playerList}));
     socket.on('playerList', data => this.setState({players: data}));
@@ -81,19 +82,46 @@ class App extends Component {
     event.preventDefault();
   }
 
+  handleReset(event) {
+    socket.emit('event', {type: 'reset'});
+  }
 
   render() {
     const { clues } = this.state;
+
+    let playerList = null;
+    if(this.state.players !== null) {
+      playerList =  <div className="players">
+      <h4>Players</h4>{this.state.players.map(player => (<Player object = {player} />))}
+      <button className = "btn btn-secondary" onClick={this.handleReset}>Reset scores</button>
+      </div>;
+    }
 
     let currentClueComponent = null;
     if(this.state.currentClue !== null) {
       currentClueComponent = <CurrentClue object = {this.state.currentClue} />;
     }
+    else {
+      currentClueComponent = 
+        <div className="row">
+        {clues.map(category => (
+          <Cat object = {category} handleClueChange= {this.handleClueChange} />
+        ))}
 
+        <div className="col-md-2 navigation">
+           {playerList}
 
-    let playerList = null;
-    if(this.state.players !== null) {
-      playerList =  <div><h4>Players</h4>{this.state.players.map(player => (<Player object = {player} />))}</div>;      
+          <h4>Round</h4>
+          <div className="btn btn-primary"><a onClick={(e) => {this.changeRound(e, 1)}}>Jeopardy Round</a></div>
+          <div className="btn btn-primary"><a onClick={(e) => {this.changeRound(e, 2)}}>Double Jeopardy Round</a></div>                
+
+          <form onSubmit={this.handleSearch} className="categorySearch">
+            <h4>Category Search:</h4>
+            <input type="text" value={this.state.categorySearch} onChange={this.handleChange}/>
+            &nbsp;<input type="submit" value="Submit" />
+          </form>
+          </div>
+        </div>
     }
 
     let container = null;
@@ -105,29 +133,7 @@ class App extends Component {
         
         <div>
           <div className="row" className="header">
-            <div className="row">
                 { currentClueComponent }
-
-                {clues.map(category => (
-                  <Cat object = {category} handleClueChange= {this.handleClueChange} />
-                ))}
-
-                <div className="col-md-2 navigation">
-                   {playerList}
-
-                  <h4>Round</h4>
-                  <div className="btn btn-primary"><a onClick={(e) => {this.changeRound(e, 1)}}>Jeopardy Round</a></div>
-                  <div className="btn btn-primary"><a onClick={(e) => {this.changeRound(e, 2)}}>Double Jeopardy Round</a></div>                
-
-                  <form onSubmit={this.handleSearch} className="categorySearch">
-                    <h4>Category Search:</h4>
-                    <input type="text" value={this.state.categorySearch} onChange={this.handleChange}/>
-                    &nbsp;<input type="submit" value="Submit" />
-                  </form>
-                  </div>
-
-                </div>
-
             </div>
         </div>
       
@@ -149,7 +155,8 @@ class CurrentClue extends Component {
       answer: null,
       allGuesses: [],
       correctAnswer: null,
-      showAnswer: null
+      showAnswer: null,
+      submitDisabled : false
     };
 
     this.handleExit = this.handleExit.bind(this);    
@@ -174,11 +181,11 @@ class CurrentClue extends Component {
 
   handleGuess(event) {
     socket.emit('event', {type: 'guess', answer: this.state.guess})
+    this.setState({ submitDisabled : true })
     event.preventDefault();    
   }
 
   dontknow(event) {
-
     event.preventDefault();        
   }
 
@@ -209,8 +216,8 @@ class CurrentClue extends Component {
             <div className = 'clue'> {this.props.object.clue} </div>
             <div className = 'answer'> 
               <form onSubmit = {this.handleGuess}>
-                <input autoFocus type="text" value={this.state.guess} onChange={this.handleGuessChange}/>
-                &nbsp;<input type="submit" className="btn-lg btn-primary" value="Submit" />
+                <input autoFocus type="text" value={this.state.guess} onChange={this.handleGuessChange} disabled={this.state.submitDisabled} />
+                &nbsp;<input type="submit" className="btn-lg btn-primary" value="Submit" disabled={this.state.submitDisabled}/>
               </form>
 
            </div>
