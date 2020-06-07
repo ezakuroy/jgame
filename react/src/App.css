@@ -119,7 +119,7 @@ body {
 
 .modal-overlay {
   display: block;
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   width: 100%;
@@ -127,6 +127,7 @@ body {
   z-index: 10000;
   background-color: #aacfcf;
   padding-top:50px;
+  overflow:auto;
 }
 
 .clue-details {
@@ -185,6 +186,10 @@ body {
     height: auto;
     min-height:100%;
   }
+
+  .answer input[type="submit"] {
+    margin-top: 10px;
+  }
 }
 
 .answer form input[type="text"] {
@@ -202,6 +207,8 @@ body {
 
 .correctAnswer .spoiler {
   background-color: #212529;
+  min-width: 180px;
+  display: inline-block;
 }
 
 .correctAnswer .spoiler:hover, .correctAnswer .spoiler:focus {

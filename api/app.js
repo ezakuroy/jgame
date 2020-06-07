@@ -73,7 +73,7 @@ io.on('connection', function(socket){
 				guesses[data.index].status = 'correct';
 				socket.emit('showAnswer', 'noSpoiler');
 				socket.broadcast.emit('showAnswer', 'noSpoiler');
-								
+
 				broadcastEverything();
 
 				currentQuestion = null;
@@ -90,6 +90,12 @@ io.on('connection', function(socket){
 
 				broadcastEverything();
 			}
+		}
+		else if(data.type == 'reset') {
+			for(var i in playerList) {
+				playerList[i].score = 0;
+			}
+			broadcastEverything();
 		}
 	})
 
@@ -145,29 +151,6 @@ app.use(function(req, res, next) {
   next();
 });
 
-/*
-app.get('/category/search', (req, res) => {
-	let term = req.query.q;
-
-	//console.log('Searching for ' + term);
-
-	var query = 'SELECT id, category FROM categories WHERE category LIKE "%' + term + '%" limit 20';
-
-	db.all(query, function(err, allRows) {
-		if(err) {
-			return console.error(err.message);
-		}
-
-//		res.json(allRows)
-	   var socket = req.app.get('socketIo');
-       socket.emit('board', board);		
-   	   res.end();
-	
-	});
-
-});
-*/
-
 app.get('/category', (req, res) => {
 	let term = req.query.q;
 
@@ -189,29 +172,6 @@ app.get('/category', (req, res) => {
 	});
 
 });
-
-/*
-app.get('/clues/search', (req, res) => {
-	let term = req.query.q;
-
-	//console.log('Searching for ' + term);
-
-	var query = 'SELECT id, category FROM categories WHERE category LIKE "%' + term + '%" limit 20';
-
-	db.all(query, function(err, allRows) {
-		if(err) {
-			return console.error(err.message);
-		}
-
-		//res.json(allRows)
-	   var socket = req.app.get('socketIo');
-       socket.emit('board', allRows);		
-   	   res.end();
-		
-	});
-
-});
-*/
 
 app.get('/clues/getGroup', (req, res) => {
 	console.log('Called get group API');
