@@ -139,7 +139,7 @@ class App extends Component {
       
     }
 
-    return (
+    return ( 
         <div className="container">
           { container }
         </div>
@@ -156,12 +156,17 @@ class CurrentClue extends Component {
       allGuesses: [],
       correctAnswer: null,
       showAnswer: null,
-      submitDisabled : false
+      submitDisabled : false,
+      bet: null,
+      betSubmitted: false
     };
 
     this.handleExit = this.handleExit.bind(this);    
     this.handleGuess = this.handleGuess.bind(this);
     this.handleGuessChange = this.handleGuessChange.bind(this);
+    this.handleBetChange = this.handleBetChange.bind(this);
+    this.handleBet = this.handleBet.bind(this);
+
 
     socket.on('guesses', data => this.setState({allGuesses: data}));    
     socket.on('showAnswer', data => this.setState({showAnswer: data}));    
@@ -193,6 +198,15 @@ class CurrentClue extends Component {
     console.log(this.props);    
   }
 
+  handleBetChange(event) {
+    this.setState( { bet: event.target.value} );
+  }
+
+  handleBet(event) {
+    socket.emit('event', {type: 'bet', bet: this.state.bet});
+    this.setState({betSubmitted: true});
+  }
+
   render() {
     let correctAnswer = null;
     if(this.state.showAnswer !== null || this.state.allGuesses.length > 0) {
@@ -207,20 +221,41 @@ class CurrentClue extends Component {
          </table>
       </div>;
     }
+    let dailyDouble = null;
+    if(this.props.object.dailyDouble) {
+      if(!this.state.betSubmitted) {
+      dailyDouble = 
+        <div class="dailyDouble">
+          <h3>Daily Double Bet:</h3> 
+          <form onSubmit = {this.handleBet}>
+            <input autoFocus type="number" value={this.state.bet} onChange={this.handleBetChange} />
+            &nbsp;<input type="submit" className="btn-lg btn-primary" value="Submit" />
+          </form>      
+        </div>;
+      } 
+      else {
+        dailyDouble = <div class="dailyDouble"><h3>Bet: {this.state.bet}</h3></div>
+      }
+    }
+
     return(
       <div className = "modal-overlay">
         <div className = "clue-details col-md-4 offset-md-4">
+
             <div className='categoryName'>{this.props.object.category}</div>
             <div className='clueValue'>${this.props.object.value}</div>
             <div className='airdate'>{this.props.object.airdate}</div>
-            <div className = 'clue'> {this.props.object.clue} </div>
-            <div className = 'answer'> 
-              <form onSubmit = {this.handleGuess}>
-                <input autoFocus type="text" value={this.state.guess} onChange={this.handleGuessChange} disabled={this.state.submitDisabled} />
-                &nbsp;<input type="submit" className="btn-lg btn-primary" value="Submit" disabled={this.state.submitDisabled}/>
-              </form>
+            {dailyDouble}
 
-           </div>
+            <div className={(!this.props.object.dailyDouble || this.props.object.dailyDouble && this.state.betSubmitted) ? 'visible' : 'hidden'}>
+                <div className = 'clue'> {this.props.object.clue} </div>
+                <div className = 'answer'> 
+                  <form onSubmit = {this.handleGuess}>
+                    <input autoFocus type="text" value={this.state.guess} onChange={this.handleGuessChange} disabled={this.state.submitDisabled} />
+                    &nbsp;<input type="submit" className="btn-lg btn-primary" value="Submit" disabled={this.state.submitDisabled}/>
+                  </form>
+               </div>
+             </div>
 
               {correctAnswer}
 

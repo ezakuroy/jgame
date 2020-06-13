@@ -24,6 +24,15 @@ var playerList = {};
 var currentQuestion;
 var guesses = [];
 var board = [];
+var game = {
+	settings: {
+		dailyDouble: true
+	},
+	state: {
+		currentTurn: null,
+		bet: null
+	}
+};
 
 io.on('connection', function(socket){
 	console.log('A user connected.');
@@ -67,9 +76,21 @@ io.on('connection', function(socket){
 			
 			broadcastEverything();		
 		}
+		else if(data.type == 'bet') {
+			if(data.bet !== null) {
+				game.state.bet = data.bet;
+			}
+		}
 		else if(data.type == 'judgement') {
 			if(data.judgement == 'correct' && currentQuestion !== null) {
-				playerList[data.player].score += currentQuestion.value;
+				if(game.state.bet == null) { // not daily double
+					playerList[data.player].score += currentQuestion.value;
+				}
+				else { // daily double
+					playerList[data.player].score += game.state.bet;					
+					game.state.bet = null;
+				}
+
 				guesses[data.index].status = 'correct';
 				socket.emit('showAnswer', 'noSpoiler');
 				socket.broadcast.emit('showAnswer', 'noSpoiler');
@@ -85,7 +106,13 @@ io.on('connection', function(socket){
 				}, 3000);				
 			}
 			else {
-				playerList[data.player].score -= currentQuestion.value;
+				if(game.state.bet == null) { // not daily double
+					playerList[data.player].score -= currentQuestion.value;
+				}
+				else {
+					playerList[data.player].score -= game.state.bet;
+					game.state.bet = null;
+				}
 				guesses[data.index].status = 'incorrect';
 
 				broadcastEverything();
@@ -209,6 +236,17 @@ app.get('/clues/getGroup', (req, res) => {
 		var count = 0;
 		var returnCount = 0;
 
+		var dailyDouble = [];
+		if(roundNum == 1) {
+			dailyDouble = [[Math.floor(Math.random() * 6), 1 + Math.floor(Math.random() * 4)]];
+		}
+		else if(roundNum == 2) {
+			dailyDouble = [[Math.floor(Math.random() * 6), 1 + Math.floor(Math.random() * 4)], [Math.floor(Math.random() * 5), 1 + Math.floor(Math.random() * 4)]];
+			if(dailyDouble[1][0] == dailyDouble[0][0]) { // Check if the column of the first daily double is the same
+				dailyDouble[1][0] = dailyDouble[1][0] + 1; // If so, then increment it because it needs to be a different column
+			}
+		}
+
 		allRows.forEach((row) => {
 
 			if(currentCat !== row.category_id) {
@@ -233,6 +271,19 @@ app.get('/clues/getGroup', (req, res) => {
 
 		returnArray.push(currentArray);
 		//board = JSON.stringify(allRows);
+
+		try {
+			console.log('Setting ' + dailyDouble[0][0] + ' , ' + dailyDouble[0][1] + ' to daily double');
+			returnArray[dailyDouble[0][0]][dailyDouble[0][1]].dailyDouble = true;
+
+			if(typeof dailyDouble[1] !== 'undefined') {
+				returnArray[dailyDouble[1][0]][dailyDouble[1][1]].dailyDouble = true;
+				console.log('Setting ' + dailyDouble[1][0] + ' , ' + dailyDouble[1][1] + ' to daily double');
+			}
+		}
+		catch(err) {
+			console.log(err.message);
+		}
 
 	   board = returnArray;
 	   var socket = req.app.get('socketIo');
